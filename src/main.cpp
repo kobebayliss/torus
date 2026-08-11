@@ -3,36 +3,48 @@
 #include <iostream>
 #include <optional>
 #include <bit>
-
 template<typename T, size_t capacity>
 class SPSCQueue {
 	alignas(64) T* buffer;  // align to 64 byte segments for cache friendliness
 	std::atomic<uint64_t> head;
 	std::atomic<uint64_t> tail;
-	std::atomic<size_t> size;
 	static constexpr size_t rounded_capacity = std::bit_ceil(capacity);  // round to power of two for one cycle position calculation
 
 public:
 	SPSCQueue() {
+		static_assert(std::is_trivially_copyable_v<T>);
 		buffer = static_cast<T*>(std::aligned_alloc(64, rounded_capacity * sizeof(T)));
 	}
+	~SPSCQueue () { std::free(buffer); }
+	// to be implemented later
+	SPSCQueue (const SPSCQueue& other) = delete;
+	SPSCQueue& operator=(const SPSCQueue& other) = delete;
+	SPSCQueue (SPSCQueue&& other) = delete;
+	SPSCQueue& operator=(SPSCQueue&& other) = delete;
+
 	bool try_push(const T& item) {
-		if (size == rounded_capacity) {
+		uint64_t h = head.load(std::memory_order_relaxed);
+		uint64_t t = tail.load(std::memory_order_acquire);
+		if (h - t == rounded_capacity) {
 			std::cout << "FAILED TO PUSH." << std::endl;
 			return false;
 		}
-		uint64_t pos = head++ & (rounded_capacity - 1);
+
+		uint64_t pos = h & (rounded_capacity - 1);
 		buffer[pos] = item;
-		size++;
 		std::cout << "PUSHED. HEAD: " << pos << std::endl;
+		head.store(h + 1, std::memory_order_release);
 		return true;
 	}
 	std::optional<T> try_pop() {
-		if (size == 0) return std::nullopt;
-		uint64_t pos = tail++ & (rounded_capacity - 1);
-		size--;
+		uint64_t t = tail.load(std::memory_order_relaxed);
+		uint64_t h = head.load(std::memory_order_acquire);
+		if (h == t) return std::nullopt;
+		uint64_t pos = tail & (rounded_capacity - 1);
+		T item = buffer[pos];
 		std::cout << "POPPED. TAIL: " << pos << std::endl;
-		return buffer[pos];
+		tail.store(t + 1, std::memory_order_release);
+		return item;
 	}
 };
 
