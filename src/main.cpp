@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <iostream>
 #include <optional>
+#include <bit>
 
 template<typename T, size_t capacity>
 class SPSCQueue {
@@ -9,17 +10,18 @@ class SPSCQueue {
 	std::atomic<uint64_t> head;
 	std::atomic<uint64_t> tail;
 	std::atomic<size_t> size;
+	static constexpr size_t rounded_capacity = std::bit_ceil(capacity);  // round to power of two for one cycle position calculation
 
 public:
 	SPSCQueue() {
-		buffer = static_cast<T*>(std::aligned_alloc(64, capacity * sizeof(T)));
+		buffer = static_cast<T*>(std::aligned_alloc(64, rounded_capacity * sizeof(T)));
 	}
 	bool try_push(const T& item) {
-		if (size == capacity) {
+		if (size == rounded_capacity) {
 			std::cout << "FAILED TO PUSH." << std::endl;
 			return false;
 		}
-		uint64_t pos = head++ % capacity;
+		uint64_t pos = head++ & (rounded_capacity - 1);
 		buffer[pos] = item;
 		size++;
 		std::cout << "PUSHED. HEAD: " << pos << std::endl;
@@ -27,7 +29,7 @@ public:
 	}
 	std::optional<T> try_pop() {
 		if (size == 0) return std::nullopt;
-		uint64_t pos = tail++ % capacity;
+		uint64_t pos = tail++ & (rounded_capacity - 1);
 		size--;
 		std::cout << "POPPED. TAIL: " << pos << std::endl;
 		return buffer[pos];
