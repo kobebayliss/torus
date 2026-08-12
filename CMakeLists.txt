@@ -7,8 +7,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+find_package(Boost REQUIRED)
+
 add_executable(torus
-    src/main.cpp
+    src/benchmark.cpp
 )
 
 target_compile_options(torus PRIVATE
@@ -16,5 +18,10 @@ target_compile_options(torus PRIVATE
     -Wextra
     -Wpedantic
 )
+
+target_link_libraries(torus PRIVATE Boost::boost)
+
+find_package(Threads REQUIRED)
+target_link_libraries(torus PRIVATE Threads::Threads)
 
 target_include_directories(torus SYSTEM PRIVATE /opt/homebrew/include)
