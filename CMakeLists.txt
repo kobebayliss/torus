@@ -23,5 +23,3 @@ target_link_libraries(torus PRIVATE Boost::boost)
 
 find_package(Threads REQUIRED)
 target_link_libraries(torus PRIVATE Threads::Threads)
-
-target_include_directories(torus SYSTEM PRIVATE /opt/homebrew/include)
