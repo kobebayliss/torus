@@ -75,7 +75,3 @@ public:
 - No blocking API; callers are expected to spin, back off, or integrate with their own signaling/eventing mechanism while the queue is full or empty.
 - No built-in way to query current size/occupancy (by design, to keep the hot path minimal).
 - Fixed capacity, set at compile time via the `capacity` template parameter.
-
-## License
-
-Add your license of choice here (e.g. MIT, Apache 2.0).
